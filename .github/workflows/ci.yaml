@@ -1,0 +1,34 @@
+name: CI - Build & Push (Self-Hosted)
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  packages: write   # required for GHCR
+
+jobs:
+  ci:
+    runs-on: self-hosted   # ✅ YOUR MAC
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Docker login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker image
+        run: |
+          IMAGE=ghcr.io/${{ github.repository }}:${{ github.sha }}
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+          docker build -t $IMAGE .
+
+      - name: Push Docker image
+        run: |
+          docker push $IMAGE

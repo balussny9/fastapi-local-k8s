@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fastapi-local
+  labels:
+    app: fastapi-local
+spec:
+  replicas: 1
+
+  # Rolling update strategy (used by kubectl rollout)
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+
+  selector:
+    matchLabels:
+      app: fastapi-local
+
+  template:
+    metadata:
+      labels:
+        app: fastapi-local
+    spec:
+      containers:
+        - name: fastapi-local
+
+          # CI will push images to GHCR
+          # CD will update this dynamically using kubectl set image
+          image: ghcr.io/balussny9/fastapi-local-k8s:latest
+
+          # REQUIRED for CI/CD (always pull latest image)
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 8000
+
+          # Readiness decides rollout success
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+          # Liveness decides restart
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10

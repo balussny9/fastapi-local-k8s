@@ -1,0 +1,30 @@
+name: CD - Deploy to Minikube (Self-Hosted)
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  cd:
+    runs-on: self-hosted   # ✅ SAME MAC
+
+    env:
+      IMAGE: ghcr.io/${{ github.repository }}:${{ github.sha }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy new image
+        run: |
+          kubectl set image deployment/fastapi-local \
+            fastapi-local=$IMAGE
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/fastapi-local --timeout=60s
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          kubectl rollout undo deployment/fastapi-local
